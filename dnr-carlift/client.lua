@@ -3,7 +3,8 @@ local activeLifts = {}
 --- Function to create a carlift
 --- @param coords vector3
 --- @param heading number
-local function createCarLift(coords, heading)
+--- @param dbId? number
+local function createCarLift(coords, heading, dbId)
     local baseModel = Config.CarLift.Model.base
     local armModel = Config.CarLift.Model.arm
 
@@ -18,16 +19,17 @@ local function createCarLift(coords, heading)
     SetEntityHeading(armObj, heading)
     -- Arms usually start at the base level or slightly offset
     
-    local liftId = #activeLifts + 1
+    local liftId = dbId or (#activeLifts + 1)
     activeLifts[liftId] = {
         base = baseObj,
         arm = armObj,
         state = "stopped",
-        height = 0.0
+        height = 0.0,
+        dbId = dbId
     }
 
     -- Add target options
-    exports['qb-target']:AddTargetEntity(baseObj, {
+    exports["qb-target"]:AddTargetEntity(baseObj, {
         options = {
             {
                 label = "Lift Up",
@@ -54,13 +56,21 @@ local function createCarLift(coords, heading)
                 label = "Delete Lift",
                 icon = Config.CarLift.Icons["delete"],
                 action = function()
-                    TriggerServerEvent("dnr-carlift:server:deleteLift", liftId)
+                    if dbId then
+                        TriggerServerEvent("dnr-carlift:server:deleteLiftDB", dbId)
+                    else
+                        TriggerServerEvent("dnr-carlift:server:deleteLift", liftId)
+                    end
                 end
             }
         },
         distance = 2.5
     })
 end
+
+RegisterNetEvent("dnr-carlift:client:spawnLift", function(coords, heading, dbId)
+    createCarLift(coords, heading, dbId)
+end)
 
 RegisterNetEvent("dnr-carlift:client:syncLift", function(liftId, state)
     if activeLifts[liftId] then
@@ -96,8 +106,41 @@ CreateThread(function()
     end
 end)
 
-RegisterCommand(Config.CarLift.Command, function()
-    local coords = GetEntityCoords(PlayerPedId())
-    local heading = GetEntityHeading(PlayerPedId())
-    createCarLift(coords, heading)
+-- Menu feature
+local function openLiftMenu()
+    lib.registerContext({
+        id = "dnr_carlift_menu",
+        title = "Car Lift Management",
+        options = {
+            {
+                title = "Create Persistent Lift",
+                description = "Spawn a car lift at your current position",
+                icon = "plus",
+                onSelect = function()
+                    local coords = GetEntityCoords(cache.ped)
+                    local heading = GetEntityHeading(cache.ped)
+                    TriggerServerEvent("dnr-carlift:server:createLiftDB", coords, heading)
+                end
+            },
+            {
+                title = "Create Temporary Lift",
+                description = "Spawn a car lift that disappears on restart",
+                icon = "wrench",
+                onSelect = function()
+                    local coords = GetEntityCoords(cache.ped)
+                    local heading = GetEntityHeading(cache.ped)
+                    createCarLift(coords, heading)
+                end
+            }
+        }
+    })
+    lib.showContext("dnr_carlift_menu")
+end
+
+RegisterNetEvent("dnr-carlift:client:openMenu", function()
+    openLiftMenu()
+end)
+
+RegisterCommand("carlift", function()
+    -- Admin check handled by command restriction/server-side
 end, false)

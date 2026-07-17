@@ -5,6 +5,10 @@ author 'SwisserAI'
 description 'Generated with SwisserAI - https://ai.swisser.dev'
 version '1.0.0'
 
+server_scripts {
+    '@oxmysql/lib/MySQL.lua'
+}
+
 shared_scripts {
     '@ox_lib/init.lua',
     'config.lua'

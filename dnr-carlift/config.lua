@@ -2,6 +2,8 @@ Config = {}
 
 Config.Debug = false
 
+Config.AceGroup = "admin" -- ACE group allowed to use /carlift command
+
 Config.CarLift = {
     Model = {
         base = `t1ger_carlift_base`, -- model for carlift base
